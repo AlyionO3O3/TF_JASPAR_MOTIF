@@ -21,16 +21,18 @@ def get_matrix_id(tf):
     action = ["matrix", "list"]
     params = {
         "search": tf,
+        "tax_id": "9606",
         "version": 'latest',
         "data_type": "ChIP-seq",
-        "release": 2022
+        "release": "2022"
     }
     result = client.action(schema, action, params=params)
-    MOTIF = result['results'][0]['matrix_id']
-    return MOTIF
+    if tf.lower() in result['results'][0]['name'].lower() or result['results'][0]['name'].lower() in tf.lower():
+        MOTIF = result['results'][0]['matrix_id']
+        return MOTIF
 
 #輸入JASPAR ID，輸出MOTIF
-def get_matrix_ATCG(m_ID):
+def get_matrix_ATCG(m_ID, Gfreq = 0.2, Afreq = 0.3, Cfreq = 0.2, Tfreq = 0.3): #預設MOTIF中ATCG的百分比切點為AT30%、CG20%
     # Initialize a client & load the schema document
     client = coreapi.Client()
     schema = client.get("https://jaspar.genereg.net/api/v1/docs/")
@@ -41,13 +43,12 @@ def get_matrix_ATCG(m_ID):
     }
     result = client.action(schema, action, params=params)
     ATCG_Matrix = dict(result['pfm'])
-    GACT_array = np.append(np.array([list(ATCG_Matrix.values())[0],np.array(list(ATCG_Matrix.values())[1])]), np.array([list(ATCG_Matrix.values())[2],np.array(list(ATCG_Matrix.values())[3])]), axis=0)
+    GACT_array = np.append(np.array([ATCG_Matrix["G"],np.array(ATCG_Matrix["A"])]), np.array([ATCG_Matrix["C"],np.array(ATCG_Matrix["T"])]), axis=0)
     perc = GACT_array / GACT_array.sum(axis=0)
     #print(np.array([[f"{i:.2%}" for i in val] for val in perc]))
     seq1 = []
     for i in range(len(perc[0])):
         seq2 = []
-        Gfreq, Afreq, Cfreq, Tfreq = 0, 0, 0, 0 #設定MOTIF中ATCG的百分比切點
         if perc[0][i] > Gfreq:
             seq2.append('G')
         if perc[1][i] > Afreq:
@@ -56,10 +57,18 @@ def get_matrix_ATCG(m_ID):
             seq2.append('C')
         if perc[3][i] > Tfreq:
             seq2.append('T')
+        seq2 = str("[" + "".join(seq2) + "]")
         seq1.append(seq2)
+    seq1 = "".join(seq1).replace("[A]","A").replace("[T]","T").replace("[C]","C").replace("[G]","G")
     return seq1
 
-#以轉錄因子nfkb設定
+def replace_values(ATCG):
+    motif_sym_dict = {"[GA]":"R", "[CT]":"Y", "[AC]":"M", "[GT]":"K", "[GC]":"S", "[AT]":"W", "[ACT]":"H", "[GCT]":"B", "[GAC]":"V", "[GAT]":"D", "[GACT]":"N"}
+    for motifs,sym in motif_sym_dict.items():
+        ATCG = ATCG.replace(motifs,sym)
+    return ATCG
+
+#以轉錄因子nfkb確認api是否能撈取成功
 get_matrix_id("nfkb")
 
 ##############################
@@ -90,8 +99,11 @@ i = len(tf2_list)
 for tfs in tf2_list:
     try:
         MOTIF = get_matrix_id(tfs)
-        tfYesmotif_dict.setdefault(tfs,MOTIF)
-        print(f'The JASPAR MOTIF ID for {tfs} is {MOTIF}!')
+        if MOTIF == None:
+            print(f'Can not find JASPAR MOTIF ID for {tfs}!')
+        else:
+            tfYesmotif_dict.setdefault(tfs,MOTIF)
+            print(f'The JASPAR MOTIF ID for {tfs} is {MOTIF}!')
     except:
         tfNomotif_list.append(tfs)
         print(f'Can not find JASPAR MOTIF ID for {tfs}!')
@@ -109,7 +121,7 @@ print(tfNomotif_list)
 ####Step.1-3儲存為CSV檔案
 with open('/Users/alyion/Google Drive/研究所/❖Su LAB❖/9.開會報告/20220913Meeting（DEGs）/JASPAR_motif_ID.csv', 'w') as f:
     for key in tfYesmotif_dict.keys():
-            f.write("%s, %s\n" % (key, tfYesmotif_dict[key]))
+            f.write("%s,%s\n" % (key, tfYesmotif_dict[key]))
             
 #########################
 #       黏貼bed.url      #
@@ -124,7 +136,7 @@ print(tfmotifURL_dict)
     
 with open('/Users/alyion/Google Drive/研究所/❖Su LAB❖/9.開會報告/20220913Meeting（DEGs）/JASPAR_motif_URL.csv', 'w') as f:
     for key in tfmotifURL_dict.keys():
-            f.write("%s, %s\n" % (key, tfmotifURL_dict[key]))
+        f.write("%s,%s\n" % (key, tfmotifURL_dict[key]))
 
 #########################
 #  Step.2 輸入ID 找MOTIF #
@@ -149,13 +161,37 @@ print(MOTIFSeq_dict)
 ####Step.2-2儲存為CSV檔案
 with open('/Users/alyion/Google Drive/研究所/❖Su LAB❖/9.開會報告/20220913Meeting（DEGs）/JASPAR_motif2030.csv', 'w') as f:
     for key in MOTIFSeq_dict.keys():
-            f.write("%s, %s\n" % (key, MOTIFSeq_dict[key]))
-            
-print(get_matrix_ATCG('MA1106.1'))
-print(get_matrix_ATCG('MA0488.1'))
-print(get_matrix_ATCG('MA0491.1'))
-print(get_matrix_ATCG('MA0079.3'))
-print(get_matrix_ATCG('MA0083.2'))
+        MOTIFSeq_dict[key] = "".join(MOTIFSeq_dict[key]).replace("[A]","A").replace("[T]","T").replace("[C]","C").replace("[G]","G")
+        f.write("%s,%s\n" % (key, MOTIFSeq_dict[key]))
+ 
+#########################
+#     Step.3 合併檔案    #
+#     以利下一步上傳到R   #
+#########################           
+ 
+import pandas as pd
 
+ID_df = pd.read_csv("/Users/alyion/Google Drive/研究所/❖Su LAB❖/9.開會報告/20220913Meeting（DEGs）/JASPAR_motif_ID.csv", header=None)
+URL_df = pd.read_csv("/Users/alyion/Google Drive/研究所/❖Su LAB❖/9.開會報告/20220913Meeting（DEGs）/JASPAR_motif_URL.csv", header=None)
+ATCG_df = pd.read_csv("/Users/alyion/Google Drive/研究所/❖Su LAB❖/9.開會報告/20220913Meeting（DEGs）/JASPAR_motif2030.csv", header=None)
+ID_df.rename(columns={0: "TF", 1: "JASPAR ID"}, inplace=True)
+print(ID_df)
 
+URL_df.rename(columns={0: "TF", 1: "BEDURL"}, inplace=True)
+print(URL_df)
 
+ATCG_df.rename(columns={0: "JASPAR ID", 1: "MOTIF (20%30%)"}, inplace=True)
+print(ATCG_df)
+
+df1 = pd.DataFrame.merge(ID_df,ATCG_df,on='JASPAR ID')
+df2 = pd.DataFrame.merge(df1,URL_df,on='TF')
+df2['No'] = df2.index + 1
+MOTIF_symbol = []
+for item in df2["MOTIF (20%30%)"]:
+    MOTIF_symbol.append(replace_values(item))
+df2['MOTIF Symbol'] = MOTIF_symbol
+df2['mers'] = df2['MOTIF Symbol'].apply(len)
+df2 = df2[["No","TF","JASPAR ID","BEDURL","mers","MOTIF Symbol","MOTIF (20%30%)"]]
+print(df2)
+
+df2.to_csv("/Users/alyion/Google Drive/研究所/❖Su LAB❖/9.開會報告/20220913Meeting（DEGs）/For_R_MOTIFs.csv", index = False)
