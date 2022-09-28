@@ -74,11 +74,13 @@ get_matrix_id("nfkb")
 ##############################
 #  Step.1 輸入TF 找JASPAR ID  #
 ##############################
+inpath = "/Users/alyion/Google Drive/研究所/❖Su LAB❖/9.開會報告/20220913Meeting（DEGs）"
+outpath = "/Users/alyion/Google Drive/研究所/❖Su LAB❖/9.開會報告/20220913Meeting（DEGs）"
 
 ####Step.1-1輸入檔案，製作TF串列
 
 tf_list = []
-path = '/Users/alyion/Google Drive/研究所/❖Su LAB❖/9.開會報告/20220913Meeting（DEGs）/254_TFs.txt'
+path = inpath + '/total_TFs.txt'
 with open(path) as f:
     for line in f.readlines():
         tf_list.append(line.rsplit())
@@ -119,7 +121,7 @@ print(f'{len(tfNomotif_list)} other TFs failed, listed below:')
 print(tfNomotif_list)
 
 ####Step.1-3儲存為CSV檔案
-with open('/Users/alyion/Google Drive/研究所/❖Su LAB❖/9.開會報告/20220913Meeting（DEGs）/JASPAR_motif_ID.csv', 'w') as f:
+with open(outpath + '/JASPAR_motif_ID.csv', 'w') as f:
     for key in tfYesmotif_dict.keys():
             f.write("%s,%s\n" % (key, tfYesmotif_dict[key]))
             
@@ -134,7 +136,7 @@ for j in tfYesmotif_dict.keys():
     tfmotifURL_dict.setdefault(j, motif_url)
 print(tfmotifURL_dict)
     
-with open('/Users/alyion/Google Drive/研究所/❖Su LAB❖/9.開會報告/20220913Meeting（DEGs）/JASPAR_motif_URL.csv', 'w') as f:
+with open(outpath + '/JASPAR_motif_URL.csv', 'w') as f:
     for key in tfmotifURL_dict.keys():
         f.write("%s,%s\n" % (key, tfmotifURL_dict[key]))
 
@@ -159,7 +161,7 @@ print('After setting AGCT threshold to 30% and 20%, the result of new MOTIFs are
 print(MOTIFSeq_dict)
 
 ####Step.2-2儲存為CSV檔案
-with open('/Users/alyion/Google Drive/研究所/❖Su LAB❖/9.開會報告/20220913Meeting（DEGs）/JASPAR_motif2030.csv', 'w') as f:
+with open(outpath +'/JASPAR_motif2030.csv', 'w') as f:
     for key in MOTIFSeq_dict.keys():
         MOTIFSeq_dict[key] = "".join(MOTIFSeq_dict[key]).replace("[A]","A").replace("[T]","T").replace("[C]","C").replace("[G]","G")
         f.write("%s,%s\n" % (key, MOTIFSeq_dict[key]))
@@ -171,9 +173,9 @@ with open('/Users/alyion/Google Drive/研究所/❖Su LAB❖/9.開會報告/2022
  
 import pandas as pd
 
-ID_df = pd.read_csv("/Users/alyion/Google Drive/研究所/❖Su LAB❖/9.開會報告/20220913Meeting（DEGs）/JASPAR_motif_ID.csv", header=None)
-URL_df = pd.read_csv("/Users/alyion/Google Drive/研究所/❖Su LAB❖/9.開會報告/20220913Meeting（DEGs）/JASPAR_motif_URL.csv", header=None)
-ATCG_df = pd.read_csv("/Users/alyion/Google Drive/研究所/❖Su LAB❖/9.開會報告/20220913Meeting（DEGs）/JASPAR_motif2030.csv", header=None)
+ID_df = pd.read_csv(outpath + "/JASPAR_motif_ID.csv", header=None)
+URL_df = pd.read_csv(outpath + "/JASPAR_motif_URL.csv", header=None)
+ATCG_df = pd.read_csv(outpath + "/JASPAR_motif2030.csv", header=None)
 ID_df.rename(columns={0: "TF", 1: "JASPAR ID"}, inplace=True)
 print(ID_df)
 
@@ -194,4 +196,4 @@ df2['mers'] = df2['MOTIF Symbol'].apply(len)
 df2 = df2[["No","TF","JASPAR ID","BEDURL","mers","MOTIF Symbol","MOTIF (20%30%)"]]
 print(df2)
 
-df2.to_csv("/Users/alyion/Google Drive/研究所/❖Su LAB❖/9.開會報告/20220913Meeting（DEGs）/For_R_MOTIFs.csv", index = False)
+df2.to_csv(outpath + "/For_R_MOTIFs.csv", index = False)
